@@ -1,0 +1,10 @@
+mediapipe
+ultralytics
+fastapi
+uvicorn[standard]
+opencv-python
+Pillow
+scikit-learn
+joblib
+python-multipart
+requests
