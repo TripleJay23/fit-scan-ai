@@ -8,25 +8,25 @@ import kotlinx.coroutines.flow.map
 
 class MeasurementRepository(private val measurementDao: MeasurementDao) {
 
-    val allScans: Flow<List<ScanResult>> = measurementDao.getAll().map { list ->
+    val allScans: Flow<List<ScanResult>> = measurementDao.getAllMeasurements().map { list ->
         list.map { it.toScanResult() }
     }
 
     suspend fun getScanById(id: Int): ScanResult? {
-        return measurementDao.getById(id)?.toScanResult()
+        return measurementDao.getMeasurementById(id.toLong())?.toScanResult()
     }
 
     suspend fun saveScan(scanResult: ScanResult): Int {
         val entity = MeasurementEntity.fromScanResult(scanResult)
-        val rowId = measurementDao.insert(entity)
+        val rowId = measurementDao.insertMeasurement(entity)
         return rowId.toInt()
     }
 
     suspend fun deleteScan(id: Int) {
-        measurementDao.deleteById(id)
+        measurementDao.deleteById(id.toLong())
     }
 
     suspend fun clearAllData() {
-        measurementDao.deleteAll()
+        measurementDao.deleteAllMeasurements()
     }
 }
