@@ -296,5 +296,13 @@ def analyze_frame(request: Base64FrameRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    # Bind to standard entry-point configuration port 3000
-    uvicorn.run("main:app", host="0.0.0.0", port=3000, reload=True)
+    from dotenv import load_dotenv
+    
+    # Load environment variables from .env file
+    load_dotenv()
+    
+    # Fetch port from environment, fallback to 8000 if not found
+    port = int(os.getenv("APP_PORT", 8000))
+    
+    # Bind to 0.0.0.0 to allow incoming connections from the Android phone
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

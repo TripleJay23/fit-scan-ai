@@ -72,19 +72,23 @@ class MeasurementCalculator:
 
         # Extract landmarks to find pixel body height
         nose_pt = (landmarks["NOSE"]["x_px_crop"], landmarks["NOSE"]["y_px_crop"])
-        
         l_ankle = (landmarks["LEFT_ANKLE"]["x_px_crop"], landmarks["LEFT_ANKLE"]["y_px_crop"])
         r_ankle = (landmarks["RIGHT_ANKLE"]["x_px_crop"], landmarks["RIGHT_ANKLE"]["y_px_crop"])
+
         ankles_midpoint = midpoint_2d(l_ankle, r_ankle)
-
-        # pixel_body_height = distance(NOSE, midpoint(LEFT_ANKLE, RIGHT_ANKLE))
-        pixel_body_height = euclidean_distance_2d(nose_pt, ankles_midpoint)
         
-        if pixel_body_height <= 0:
+        # Calculate pixel distance from nose to the floor (ankles)
+        nose_to_ankle_pixels = euclidean_distance_2d(nose_pt, ankles_midpoint)
+        
+        if nose_to_ankle_pixels <= 0:
             raise ValueError("Calculated pixel body height is zero or invalid.")
-
-        scale = user_height_cm / pixel_body_height
-        return scale, f"User Height Calibration ({user_height_cm}cm = {pixel_body_height:.1f}px)"
+            
+        # Anatomical correction: Nose to ankle is ~90% of total height
+        actual_pixel_height = nose_to_ankle_pixels / 0.90
+        
+        scale = user_height_cm / actual_pixel_height
+        
+        return scale, f"User Height Calibration ({user_height_cm}cm = {actual_pixel_height:.1f}px)"
 
     @classmethod
     def calculate_measurements(
@@ -139,13 +143,11 @@ class MeasurementCalculator:
         hip_width = px_hip_width * scale
 
         # 4. Arm Length = (distance(L_SHOULDER, L_ELBOW) + distance(L_ELBOW, L_WRIST)) * scale
-        # Calculate for both and average them to increase accuracy
         px_l_arm = euclidean_distance_2d(l_shoulder, l_elbow) + euclidean_distance_2d(l_elbow, l_wrist)
         px_r_arm = euclidean_distance_2d(r_shoulder, r_elbow) + euclidean_distance_2d(r_elbow, r_wrist)
         arm_length = ((px_l_arm + px_r_arm) / 2.0) * scale
 
         # 5. Circumference Estimates
-        # Multiply flat widths by proportional body-depth multipliers
         chest_circumference = shoulder_width * CHEST_CIRCUMFERENCE_MULTIPLIER
         
         # Adjustable waist modifier based on the waist-to-hip ratio which handles visual silhouettes
@@ -166,11 +168,14 @@ class MeasurementCalculator:
         px_r_leg = euclidean_distance_2d(r_knee, r_ankle)
         inseam_cm = ((px_l_leg + px_r_leg) / 2.0) * scale * 2.0
 
+        # --- CORRECTED HEIGHT ESTIMATION BLOCK ---
         # Calculate height from landmarker estimation
         nose_pt = (landmarks["NOSE"]["x_px_crop"], landmarks["NOSE"]["y_px_crop"])
         ankles_mid = midpoint_2d(l_ankle, r_ankle)
         pixel_height_est = euclidean_distance_2d(nose_pt, ankles_mid)
-        estimated_height_cm = pixel_height_est * scale
+        
+        # Apply the 90% anatomical correction to define the missing variable
+        estimated_height_cm = (pixel_height_est / 0.90) * scale
 
         # Package raw and processed dimensions
         return {
