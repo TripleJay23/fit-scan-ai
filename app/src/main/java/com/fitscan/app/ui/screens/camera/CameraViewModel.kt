@@ -1,0 +1,76 @@
+package com.fitscan.app.ui.screens.camera
+
+import android.graphics.Bitmap
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.fitscan.app.domain.model.PoseLandmark
+import com.fitscan.app.domain.model.ScanResult
+import com.fitscan.app.domain.usecase.AnalyzeImageUseCase
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+sealed class CameraUiState {
+    object Idle : CameraUiState()
+    object Detecting : CameraUiState()
+    object Measuring : CameraUiState()
+    data class Complete(val result: ScanResult) : CameraUiState()
+    data class Error(val message: String) : CameraUiState()
+}
+
+class CameraViewModel(
+    private val analyzeImageUseCase: AnalyzeImageUseCase
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow<CameraUiState>(CameraUiState.Idle)
+    val uiState: StateFlow<CameraUiState> = _uiState.asStateFlow()
+
+    private val _detectedLandmarks = MutableStateFlow<List<PoseLandmark>>(emptyList())
+    val detectedLandmarks: StateFlow<List<PoseLandmark>> = _detectedLandmarks.asStateFlow()
+
+    private var activeBitmap: Bitmap? = null
+
+    fun onPoseDetected(landmarks: List<PoseLandmark>, bitmap: Bitmap) {
+        _detectedLandmarks.value = landmarks
+        activeBitmap = bitmap
+        
+        if (_uiState.value is CameraUiState.Idle && landmarks.isNotEmpty()) {
+            _uiState.value = CameraUiState.Detecting
+        }
+    }
+
+    fun lockAndAnalyze(heightCm: Float) {
+        val bitmap = activeBitmap ?: return
+        
+        viewModelScope.launch {
+            _uiState.value = CameraUiState.Measuring
+            try {
+                // Trigger actual usecase to compute and save body proportions
+                val result = analyzeImageUseCase(bitmap, heightCm)
+                _uiState.value = CameraUiState.Complete(result)
+            } catch (e: Exception) {
+                _uiState.value = CameraUiState.Error(e.message ?: "Analysis failed")
+            }
+        }
+    }
+
+    fun resetState() {
+        _uiState.value = CameraUiState.Idle
+        _detectedLandmarks.value = emptyList()
+        activeBitmap = null
+    }
+}
+
+class CameraViewModelFactory(
+    private val analyzeImageUseCase: AnalyzeImageUseCase
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(CameraViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return CameraViewModel(analyzeImageUseCase) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
