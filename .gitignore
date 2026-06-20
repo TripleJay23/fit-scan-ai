@@ -1,19 +1,38 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+# --- GLOBAL SPECIFICATIONS ---
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+Thumbs.db
+*.log
+logs/
+
+# --- PYTHON BACKEND CONSTRAINTS ---
+# Environments & Packages
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Local Credentials
+.env
+
+# Large Native Machine Learning Models (Ignored on GitHub due to size limits)
+models/*.pt
+models/*.task
+assets/*.task
+*.pt
+*.task
+
+# --- ANDROID FRONTEND CONSTRAINTS ---
+# Build configurations and cached layers
+.gradle/
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
 local.properties
 
-# Large Local ML Models
-app/src/main/assets/*.task
-app/src/main/assets/*.tflite
+# Android Studio configuration states
+.idea/
+*.iml
