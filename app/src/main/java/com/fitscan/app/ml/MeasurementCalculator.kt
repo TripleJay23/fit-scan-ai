@@ -6,9 +6,14 @@ import kotlin.math.sqrt
 
 object MeasurementCalculator {
 
-    fun euclideanDistance(p1: PoseLandmark, p2: PoseLandmark, width: Int, height: Int): Float {
-        val dx = (p1.x - p2.x) * width
-        val dy = (p1.y - p2.y) * height
+    // CONSTANTS MATCHING THE BACKEND ANATOMICAL DESIGN
+    private const val CHEST_CIRCUMFERENCE_MULTIPLIER = 2.15f
+    private const val WAIST_CIRCUMFERENCE_MULTIPLIER = 1.85f
+    private const val HIP_CIRCUMFERENCE_MULTIPLIER = 2.40f
+
+    fun euclideanDistance(p1: PoseLandmark, p2: PoseLandmark): Float {
+        val dx = p1.x - p2.x
+        val dy = p1.y - p2.y
         return sqrt(dx * dx + dy * dy)
     }
 
@@ -28,55 +33,63 @@ object MeasurementCalculator {
         imageWidth: Int,
         imageHeight: Int
     ): BodyMeasurements {
+        // Map list into an easily queryable dictionary index mapping
         val landmarkMap = landmarks.associateBy { it.index }
 
-        val nose = landmarkMap[0] ?: PoseLandmark(0, 0.50f, 0.15f, 0f, 1f)
-        val lShoulder = landmarkMap[11] ?: PoseLandmark(11, 0.40f, 0.28f, 0f, 1f)
-        val rShoulder = landmarkMap[12] ?: PoseLandmark(12, 0.60f, 0.28f, 0f, 1f)
-        val lElbow = landmarkMap[13] ?: PoseLandmark(13, 0.35f, 0.45f, 0f, 1f)
-        val rElbow = landmarkMap[14] ?: PoseLandmark(14, 0.65f, 0.45f, 0f, 1f)
-        val lWrist = landmarkMap[15] ?: PoseLandmark(15, 0.32f, 0.60f, 0f, 1f)
-        val rWrist = landmarkMap[16] ?: PoseLandmark(16, 0.68f, 0.60f, 0f, 1f)
-        val lHip = landmarkMap[23] ?: PoseLandmark(23, 0.43f, 0.52f, 0f, 1f)
-        val rHip = landmarkMap[24] ?: PoseLandmark(24, 0.57f, 0.52f, 0f, 1f)
-        val lAnkle = landmarkMap[27] ?: PoseLandmark(27, 0.45f, 0.90f, 0f, 1f)
-        val rAnkle = landmarkMap[28] ?: PoseLandmark(28, 0.55f, 0.90f, 0f, 1f)
+        // Core extraction indices
+        val nose = landmarkMap[0] ?: return BodyMeasurements(0f,0f,0f,0f,0f,0f,0f)
+        val lShoulder = landmarkMap[11] ?: return BodyMeasurements(0f,0f,0f,0f,0f,0f,0f)
+        val rShoulder = landmarkMap[12] ?: return BodyMeasurements(0f,0f,0f,0f,0f,0f,0f)
+        val lElbow = landmarkMap[13] ?: return BodyMeasurements(0f,0f,0f,0f,0f,0f,0f)
+        val rElbow = landmarkMap[14] ?: return BodyMeasurements(0f,0f,0f,0f,0f,0f,0f)
+        val lWrist = landmarkMap[15] ?: return BodyMeasurements(0f,0f,0f,0f,0f,0f,0f)
+        val rWrist = landmarkMap[16] ?: return BodyMeasurements(0f,0f,0f,0f,0f,0f,0f)
+        val lHip = landmarkMap[23] ?: return BodyMeasurements(0f,0f,0f,0f,0f,0f,0f)
+        val rHip = landmarkMap[24] ?: return BodyMeasurements(0f,0f,0f,0f,0f,0f,0f)
+        val lAnkle = landmarkMap[27] ?: return BodyMeasurements(0f,0f,0f,0f,0f,0f,0f)
+        val rAnkle = landmarkMap[28] ?: return BodyMeasurements(0f,0f,0f,0f,0f,0f,0f)
 
+        // 1. Calculate Calibration Scale Factor matching the backend ratio
         val anklesMid = midpoint(lAnkle, rAnkle)
+        val noseToAnklePixels = euclideanDistance(nose, anklesMid)
 
-        // pixelBodyHeight = distance(NOSE, midpoint(L_ANKLE, R_ANKLE))
-        val pixelBodyHeight = euclideanDistance(nose, anklesMid, imageWidth, imageHeight)
+        if (noseToAnklePixels <= 0f) return BodyMeasurements(0f,0f,0f,0f,0f,0f,0f)
 
-        // scaleFactor = heightCm / pixelBodyHeight
-        val scaleFactor = if (pixelBodyHeight > 0) heightCm / pixelBodyHeight else 1.0f
+        // Correct for 90% nose-to-ankle anatomical height distribution
+        val actualPixelHeight = noseToAnklePixels / 0.90f
+        val scaleFactor = heightCm / actualPixelHeight
 
-        // shoulderWidth = distance(L_SHOULDER, R_SHOULDER) * scaleFactor
-        val shoulderWidth = euclideanDistance(lShoulder, rShoulder, imageWidth, imageHeight) * scaleFactor
+        // 2. Transpile width spatial metrics
+        val shoulderWidth = euclideanDistance(lShoulder, rShoulder) * scaleFactor
+        val hipWidth = euclideanDistance(lHip, rHip) * scaleFactor
 
-        // hipWidth = distance(L_HIP, R_HIP) * scaleFactor
-        val hipWidth = euclideanDistance(lHip, rHip, imageWidth, imageHeight) * scaleFactor
+        // 3. Average arm tracking length paths
+        val lArmLength = euclideanDistance(lShoulder, lElbow) + euclideanDistance(lElbow, lWrist)
+        val rArmLength = euclideanDistance(rShoulder, rElbow) + euclideanDistance(rElbow, rWrist)
+        val armLength = ((lArmLength + rArmLength) / 2f) * scaleFactor
 
-        // chestCirc = shoulderWidth * 2.15f
-        val chestCirc = shoulderWidth * 2.15f
+        // 4. Calculate final structural estimations
+        val chestCirc = shoulderWidth * CHEST_CIRCUMFERENCE_MULTIPLIER
 
-        // waistCirc = hipWidth * 1.85f
-        val waistCirc = hipWidth * 1.85f
+        var waistCircMod = WAIST_CIRCUMFERENCE_MULTIPLIER
+        val hipToShoulderRatio = hipWidth / (shoulderWidth + 1e-5f)
+        if (hipToShoulderRatio > 0.95f) {
+            waistCircMod += 0.05f
+        } else if (hipToShoulderRatio < 0.82f) {
+            waistCircMod -= 0.05f
+        }
+        val waistCirc = hipWidth * waistCircMod
+        val hipCirc = hipWidth * HIP_CIRCUMFERENCE_MULTIPLIER
 
-        // hipCirc = hipWidth * 2.40f
-        val hipCirc = hipWidth * 2.40f
-
-        // armLength = (distance(L_SHOULDER,L_ELBOW) + distance(L_ELBOW,L_WRIST)) * scaleFactor
-        val armLength = (euclideanDistance(lShoulder, lElbow, imageWidth, imageHeight) +
-                euclideanDistance(lElbow, lWrist, imageWidth, imageHeight)) * scaleFactor
-
+        // Returns the mapped model containing the explicitly requested fields
         return BodyMeasurements(
+            heightCm = heightCm,
             shoulderWidth = shoulderWidth,
             chestCirc = chestCirc,
             waistCirc = waistCirc,
+            hipWidth = hipWidth,     // Correctly mapped
             hipCirc = hipCirc,
-            armLength = armLength,
-            hipWidth = hipWidth,
-            heightCm = heightCm
+            armLength = armLength
         )
     }
 }
