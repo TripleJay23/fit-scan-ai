@@ -14,7 +14,7 @@ class FitScanApp : Application() {
     
     val poseDetector by lazy { PoseDetector(this) }
     
-    val analyzeImageUseCase by lazy { AnalyzeImageUseCase(this, repository) }
+    val analyzeImageUseCase by lazy { AnalyzeImageUseCase(this, repository, poseDetector) }
     val getMeasurementHistoryUseCase by lazy { GetMeasurementHistoryUseCase(repository) }
 
     override fun onCreate() {
