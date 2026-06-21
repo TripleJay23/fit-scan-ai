@@ -15,7 +15,6 @@ import java.io.File
 import java.io.FileOutputStream
 
 class AnalyzeImageUseCase(
-    private val context: Context,
     private val repository: MeasurementRepository,
     private val poseDetector: PoseDetector
 ) {
@@ -40,11 +39,14 @@ class AnalyzeImageUseCase(
             val recommendedSizes = SizeMapper.generateClothingSizes(measurements)
 
             // 4. Map to Domain Model
+            val avgVisibility = landmarks.map { it.visibility }.average().toFloat()
+            val confidenceScore = (avgVisibility * 100).toInt().coerceIn(0, 100)
+            
             val resultId = (System.currentTimeMillis() % 100000).toInt()
             val result = ScanResult(
                 id = resultId,
                 timestamp = System.currentTimeMillis(),
-                confidenceScore = 92, // Locally calculated baseline
+                confidenceScore = confidenceScore,
                 heightCm = heightCm,
                 recommendedSize = recommendedSizes.firstOrNull()?.sizeText ?: "N/A",
                 measurements = measurements,
