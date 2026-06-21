@@ -28,12 +28,14 @@ class UploadViewModel(
     fun analyzeSelectedPhoto(bitmap: Bitmap, heightCm: Float) {
         viewModelScope.launch {
             _uiState.value = UploadUiState.Processing
-            try {
-                val result = analyzeImageUseCase(bitmap, heightCm)
-                _uiState.value = UploadUiState.Complete(result)
-            } catch (e: Exception) {
-                _uiState.value = UploadUiState.Error(e.message ?: "Failed to process photo")
-            }
+            analyzeImageUseCase(bitmap, heightCm).fold(
+                onSuccess = { result ->
+                    _uiState.value = UploadUiState.Complete(result)
+                },
+                onFailure = { error ->
+                    _uiState.value = UploadUiState.Error(error.message ?: "Failed to process photo")
+                }
+            )
         }
     }
 

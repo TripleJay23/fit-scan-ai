@@ -214,7 +214,7 @@ fun CameraPreviewAndOverlay(
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
                     lifecycleOwner,
-                    CameraSelector.DEFAULT_FRONT_CAMERA, // Default facing back or front mirror scan
+                    CameraSelector.DEFAULT_BACK_CAMERA, // Use rear camera by default
                     preview,
                     imageAnalysis
                 )

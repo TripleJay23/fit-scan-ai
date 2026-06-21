@@ -35,10 +35,6 @@ class CameraViewModel(
     fun onPoseDetected(landmarks: List<PoseLandmark>, bitmap: Bitmap) {
         _detectedLandmarks.value = landmarks
         activeBitmap = bitmap
-        
-        if (_uiState.value is CameraUiState.Idle && landmarks.isNotEmpty()) {
-            _uiState.value = CameraUiState.Detecting
-        }
     }
 
     fun lockAndAnalyze(heightCm: Float) {
@@ -46,13 +42,14 @@ class CameraViewModel(
         
         viewModelScope.launch {
             _uiState.value = CameraUiState.Measuring
-            try {
-                // Trigger actual usecase to compute and save body proportions
-                val result = analyzeImageUseCase(bitmap, heightCm)
-                _uiState.value = CameraUiState.Complete(result)
-            } catch (e: Exception) {
-                _uiState.value = CameraUiState.Error(e.message ?: "Analysis failed")
-            }
+            analyzeImageUseCase(bitmap, heightCm).fold(
+                onSuccess = { result ->
+                    _uiState.value = CameraUiState.Complete(result)
+                },
+                onFailure = { error ->
+                    _uiState.value = CameraUiState.Error(error.message ?: "Analysis failed")
+                }
+            )
         }
     }
 

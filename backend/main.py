@@ -126,16 +126,10 @@ def run_fitscan_pipeline(
         cropped_person, detect_meta = detector.detect_and_crop(image)
     except PersonDetectionError as pde:
         logger.warning(f"Detection error raised: {pde}")
-        return {
-            "status": "error",
-            "confidence": 0,
-            "landmarks_visibility_ok": False,
-            "measurements_cm": None,
-            "recommended_sizes": None,
-            "fit_notes": None,
-            "model_used": "mediapipe-pose-full + yolov8n",
-            "retry_reason": str(pde)
-        }
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(pde)
+        )
 
     # Extract crop bounding details to map landmarks back
     crop_x1, crop_y1 = detect_meta["bbox"][0], detect_meta["bbox"][1]
@@ -145,31 +139,19 @@ def run_fitscan_pipeline(
         landmarks = estimator.estimate_pose(cropped_person, bbox_offset=(crop_x1, crop_y1))
     except PoseEstimationError as pee:
         logger.warning(f"Pose Estimation failure: {pee}")
-        return {
-            "status": "error",
-            "confidence": 0,
-            "landmarks_visibility_ok": False,
-            "measurements_cm": None,
-            "recommended_sizes": None,
-            "fit_notes": None,
-            "model_used": "mediapipe-pose-full + yolov8n",
-            "retry_reason": str(pee)
-        }
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(pee)
+        )
 
     # Validate landmark quality
     is_valid_landmarks, validation_err = estimator.validate_landmarks(landmarks)
     if not is_valid_landmarks:
         logger.warning(f"Landmarks validation failed: {validation_err}")
-        return {
-            "status": "error",
-            "confidence": 40,
-            "landmarks_visibility_ok": False,
-            "measurements_cm": None,
-            "recommended_sizes": None,
-            "fit_notes": None,
-            "model_used": "mediapipe-pose-full + yolov8n",
-            "retry_reason": validation_err
-        }
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=validation_err
+        )
 
     # 4. Stage 3 - Measurement Calculations
     try:
@@ -193,23 +175,23 @@ def run_fitscan_pipeline(
     # 6. Stage 5 - Calculate Reliability Confidence Score
     confidence_score = ConfidenceCalculator.calculate(landmarks, measurements)
 
-    # Construct the highly detailed unified response block
+    # Construct the flat response block to match Android DTO
     return {
         "status": "success",
         "confidence": confidence_score,
-        "landmarks_visibility_ok": True,
-        "measurements_cm": {
-            "shoulder_width": measurements["shoulder_width"],
-            "chest_circumference": measurements["chest_circumference"],
-            "waist_circumference": measurements["waist_circumference"],
-            "hip_circumference": measurements["hip_circumference"],
-            "arm_length": measurements["arm_length"],
-            "height_used": measurements["height_used"]
-        },
-        "recommended_sizes": recommended_sizes,
-        "fit_notes": fit_notes,
-        "model_used": "mediapipe-pose-full + yolov8n",
-        "retry_reason": None
+        "shoulder_width": measurements["shoulder_width"],
+        "torso_height": measurements["torso_height"],
+        "hip_width": measurements["hip_width"],
+        "arm_length": measurements["arm_length"],
+        "chest_circumference": measurements["chest_circumference"],
+        "waist_circumference": measurements["waist_circumference"],
+        "hip_circumference": measurements["hip_circumference"],
+        "inseam": measurements["inseam"],
+        "height_used": measurements["height_used"],
+        "estimated_height_cm": measurements["estimated_height_cm"],
+        "calibration_method": measurements["calibration_method"],
+        "scale_factor_cm_per_px": measurements["scale_factor_cm_per_px"],
+        "model_used": "mediapipe-pose-full + yolov8n"
     }
 
 
