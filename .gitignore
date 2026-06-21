@@ -36,3 +36,8 @@ local.properties
 # Android Studio configuration states
 .idea/
 *.iml
+
+# Internal Documentation (Private files)
+AGENTS.md
+SKILLS.md
+DESIGN.md
