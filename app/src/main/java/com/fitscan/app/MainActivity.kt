@@ -119,7 +119,11 @@ fun FitScanAppNavigation(app: FitScanApp) {
 
         composable("profile") {
             ProfileScreen(
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateToHome = {
+                    navController.navigate("home") {
+                        popUpTo("home") { inclusive = true }
+                    }
+                },
                 onNavigateToCamera = { navController.navigate("camera") },
                 onNavigateToHistory = { navController.navigate("history") },
                 onClearAllScans = {

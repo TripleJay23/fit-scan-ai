@@ -286,8 +286,6 @@ fun BottomSheetController(
     onCompleteNav: (Int) -> Unit,
     onReset: () -> Unit
 ) {
-    var heightInput by remember { mutableStateOf("175") }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -331,30 +329,9 @@ fun BottomSheetController(
                     )
                 }
                 Text(
-                    text = if (hasLandmarks) "Pose detected! Double check physical height constraints & analyze." else "Keep still for optimal AI measurement accuracy.",
+                    text = if (hasLandmarks) "Pose detected! Ready for computer vision analysis." else "Keep still for optimal AI measurement accuracy.",
                     color = OnSurfaceDark.copy(alpha = 0.6f),
                     fontSize = 14.sp
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Interactive height parameter
-                OutlinedTextField(
-                    value = heightInput,
-                    onValueChange = { heightInput = it.filter { c -> c.isDigit() } },
-                    label = { Text("YOUR HEIGHT (CM)", fontSize = 11.sp, letterSpacing = 1.sp) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    placeholder = { Text("e.g. 175", color = OnSurfaceDark.copy(alpha = 0.4f)) },
-                    modifier = Modifier.fillMaxWidth().testTag("height_input_field"),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = OnSurfaceDark,
-                        unfocusedTextColor = OnSurfaceDark,
-                        focusedLabelColor = WarmGold,
-                        unfocusedLabelColor = OnSurfaceDark.copy(alpha = 0.6f),
-                        focusedBorderColor = WarmGold,
-                        unfocusedBorderColor = OnSurfaceDark.copy(alpha = 0.2f)
-                    )
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -362,8 +339,8 @@ fun BottomSheetController(
                 // Gold lock and analyze button (full-width, 56dp)
                 Button(
                     onClick = {
-                        val finalHeight = heightInput.toFloatOrNull() ?: 175.0f
-                        onLockAndAnalyze(finalHeight)
+                        // Using default height 175cm as input field is removed
+                        onLockAndAnalyze(175.0f)
                     },
                     modifier = Modifier
                         .fillMaxWidth()

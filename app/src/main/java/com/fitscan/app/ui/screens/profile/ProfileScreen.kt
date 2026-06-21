@@ -15,14 +15,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SquareFoot
 import androidx.compose.material.icons.filled.Straighten
@@ -58,7 +61,7 @@ import com.fitscan.app.ui.theme.WarmGold
 
 @Composable
 fun ProfileScreen(
-    onNavigateBack: () -> Unit,
+    onNavigateToHome: () -> Unit,
     onNavigateToCamera: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onClearAllScans: () -> Unit,
@@ -68,6 +71,7 @@ fun ProfileScreen(
     var notificationEnabled by remember { mutableStateOf(false) }
     var selectedUnit by remember { mutableStateOf("cm") }
     var selectedStandard by remember { mutableStateOf("EU") }
+    var userHeight by remember { mutableStateOf("175") }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -81,7 +85,7 @@ fun ProfileScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onNavigateBack) {
+                IconButton(onClick = onNavigateToHome) {
                     Icon(
                         imageVector = Icons.Filled.ArrowBack,
                         contentDescription = "Back",
@@ -99,7 +103,7 @@ fun ProfileScreen(
         bottomBar = {
             FitScanBottomNav(
                 currentRoute = "profile",
-                onHomeClick = onNavigateBack,
+                onHomeClick = onNavigateToHome,
                 onScanClick = onNavigateToCamera,
                 onHistoryClick = onNavigateToHistory,
                 onProfileClick = {}
@@ -110,20 +114,21 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Profile Header
+            // Profile Header with Avatar and Edit section
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(100.dp)
                         .clip(CircleShape)
-                        .border(2.dp, WarmGold.copy(alpha = 0.3f), CircleShape)
+                        .border(2.dp, WarmGold, CircleShape)
                         .background(SurfaceContainerDark),
                     contentAlignment = Alignment.Center
                 ) {
@@ -131,20 +136,49 @@ fun ProfileScreen(
                         imageVector = Icons.Filled.Person,
                         contentDescription = "Avatar picture symbol",
                         tint = WarmGold,
-                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                        modifier = Modifier.size(60.dp)
                     )
+                    
+                    // Edit badge
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .align(Alignment.BottomEnd)
+                            .background(WarmGold, CircleShape)
+                            .border(2.dp, CharcoalDark, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.PhotoCamera,
+                            contentDescription = "Edit Profile Picture",
+                            tint = CharcoalDark,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
 
-                Text(
-                    text = "Alex Reed",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = OnSurfaceDark
-                )
-                Text(
-                    text = "alex.reed@example.com",
-                    color = OnSurfaceDark.copy(alpha = 0.5f),
-                    fontSize = 14.sp
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Alex Reed",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = OnSurfaceDark,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "alex.reed@example.com",
+                        color = OnSurfaceDark.copy(alpha = 0.5f),
+                        fontSize = 14.sp
+                    )
+                }
+                
+                Button(
+                    onClick = { /* Edit Action */ },
+                    colors = ButtonDefaults.buttonColors(containerColor = WarmGold.copy(alpha = 0.1f)),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("Edit Profile", color = WarmGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
             }
 
             // Group 1: Scanning & Preferences bento card
@@ -156,28 +190,32 @@ fun ProfileScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Feature 1: Saved measurements toggle
+                // Feature: Height Preference
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
+                        modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Icon(imageVector = Icons.Filled.Straighten, contentDescription = null, tint = WarmGold)
-                        Text(text = "Saved Measurements", color = OnSurfaceDark, fontSize = 15.sp)
+                        Text(text = "Body Height (cm)", color = OnSurfaceDark, fontSize = 15.sp)
                     }
-                    Switch(
-                        checked = saveMeasurementsEnabled,
-                        onCheckedChange = { saveMeasurementsEnabled = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = CharcoalDark,
-                            checkedTrackColor = WarmGold,
-                            uncheckedThumbColor = OnSurfaceDark.copy(alpha = 0.4f),
-                            uncheckedTrackColor = OnSurfaceDark.copy(alpha = 0.1f)
-                        )
+                    
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = userHeight,
+                        onValueChange = { userHeight = it.filter { c -> c.isDigit() } },
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            color = WarmGold,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.End
+                        ),
+                        modifier = Modifier.width(60.dp),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
                     )
                 }
 
@@ -291,11 +329,12 @@ fun ProfileScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Icon(imageVector = Icons.Filled.Notifications, contentDescription = null, tint = WarmGold)
-                    Text(text = "Notifications", color = OnSurfaceDark, fontSize = 15.sp)
+                    Text(text = "Push Notifications", color = OnSurfaceDark, fontSize = 15.sp)
                 }
                 Switch(
                     checked = notificationEnabled,
