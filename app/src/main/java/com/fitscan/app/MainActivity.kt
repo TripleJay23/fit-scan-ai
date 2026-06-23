@@ -75,6 +75,7 @@ fun FitScanAppNavigation(app: FitScanApp) {
             CameraScreen(
                 viewModel = cameraViewModel,
                 poseDetector = app.poseDetector,
+                cameraCalibrationProvider = app.cameraCalibrationProvider,
                 onNavigateToResult = { scanId ->
                     navController.navigate("result/$scanId") {
                         popUpTo("home")

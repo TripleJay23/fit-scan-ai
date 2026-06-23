@@ -67,6 +67,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.fitscan.app.domain.model.ReferenceObjectType
 import com.fitscan.app.ui.theme.CharcoalDark
 import com.fitscan.app.ui.theme.OffWhite
 import com.fitscan.app.ui.theme.OnSurfaceDark
@@ -349,7 +350,11 @@ fun UploadScreen(
                                         MediaStore.Images.Media.getBitmap(context.contentResolver, loadedUri)
                                     }
                                     val heightCm = heightCmInput.toFloatOrNull() ?: 175f
-                                    viewModel.analyzeSelectedPhoto(bitmap, heightCm)
+                                    viewModel.analyzeSelectedPhoto(
+                                        bitmap = bitmap,
+                                        heightCm = heightCm,
+                                        referenceObjectType = ReferenceObjectType.fromDisplayName(selectedReference)
+                                    )
                                 }
                             },
                             modifier = Modifier

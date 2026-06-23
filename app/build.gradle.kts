@@ -22,9 +22,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-// Required for MediaPipe model file in assets
+// Required for local ML model files in assets
     aaptOptions {
-        noCompress += listOf("task")
+        noCompress += listOf("task", "tflite")
     }
 
     buildTypes {
@@ -69,6 +69,7 @@ dependencies {
 
     // MediaPipe On-Device Pose
     implementation("com.google.mediapipe:tasks-vision:0.10.14")
+    implementation("org.tensorflow:tensorflow-lite:2.16.1")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
@@ -80,11 +81,6 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
-
-    // Retrofit & Network Calls
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")

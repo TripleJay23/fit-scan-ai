@@ -3,15 +3,12 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <uses-permission android:name="android.permission.INTERNET" />
-
     <uses-feature
         android:name="android.hardware.camera"
         android:required="true" />
 
     <application
         android:name=".FitScanApp"
-        android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"

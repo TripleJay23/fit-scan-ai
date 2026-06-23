@@ -165,7 +165,7 @@ fun ResultDetails(
         // Top Confidence Badge -> Outline "87% ACCURATE" at top
         ConfidenceBadge(score = scanResult.confidenceScore)
 
-        // "AI: MediaPipe Pose · On-Device" small chip
+        // "AI: MediaPipe Pose - On-Device" small chip
         Box(
             modifier = Modifier
                 .background(OnSurfaceDark.copy(alpha = 0.05f), RoundedCornerShape(999.dp))
@@ -173,7 +173,7 @@ fun ResultDetails(
                 .padding(horizontal = 14.dp, vertical = 6.dp)
         ) {
             Text(
-                text = "AI: MediaPipe Pose · On-Device",
+                text = "AI: MediaPipe Pose - On-Device",
                 color = OnSurfaceDark.copy(alpha = 0.6f),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -190,7 +190,7 @@ fun ResultDetails(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Based on your recent 3D body scan.",
+                text = scanResult.measurements.calibrationMethod,
                 color = OnSurfaceDark.copy(alpha = 0.6f),
                 fontSize = 14.sp
             )
@@ -240,6 +240,22 @@ fun ResultDetails(
                     enter = fadeIn(animationSpec = tween(700)) + slideInVertically(animationSpec = tween(700)) { 20 }
                 ) {
                     MeasurementChip(label = "Arm Length", value = "${measurements.armLength.toInt()}cm")
+                }
+            }
+            item {
+                AnimatedVisibility(
+                    visible = animateStart,
+                    enter = fadeIn(animationSpec = tween(800)) + slideInVertically(animationSpec = tween(800)) { 20 }
+                ) {
+                    MeasurementChip(label = "Torso", value = "${measurements.torsoHeight.toInt()}cm")
+                }
+            }
+            item {
+                AnimatedVisibility(
+                    visible = animateStart,
+                    enter = fadeIn(animationSpec = tween(900)) + slideInVertically(animationSpec = tween(900)) { 20 }
+                ) {
+                    MeasurementChip(label = "Inseam", value = "${measurements.inseam.toInt()}cm")
                 }
             }
         }

@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.fitscan.app.domain.model.PoseLandmark
+import com.fitscan.app.ml.CameraCalibrationProvider
 import com.fitscan.app.ml.PoseDetector
 import com.fitscan.app.ui.components.PoseOverlayCanvas
 import com.fitscan.app.ui.theme.CharcoalDark
@@ -82,6 +83,7 @@ import java.util.concurrent.Executors
 fun CameraScreen(
     viewModel: CameraViewModel,
     poseDetector: PoseDetector,
+    cameraCalibrationProvider: CameraCalibrationProvider,
     onNavigateToResult: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -108,9 +110,10 @@ fun CameraScreen(
             if (permissionState.status.isGranted) {
                 CameraPreviewAndOverlay(
                     poseDetector = poseDetector,
+                    cameraCalibrationProvider = cameraCalibrationProvider,
                     landmarks = landmarks,
-                    onPoseDetected = { list, bitmap ->
-                        viewModel.onPoseDetected(list, bitmap)
+                    onPoseDetected = { list, bitmap, calibration ->
+                        viewModel.onPoseDetected(list, bitmap, calibration)
                     }
                 )
             } else {
@@ -142,7 +145,7 @@ fun CameraScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "STAND 1.5M AWAY · FULL BODY VISIBLE",
+                        text = "STAND 1.5M AWAY - FULL BODY VISIBLE",
                         color = OnSurfaceDark,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -180,14 +183,16 @@ fun CameraScreen(
 @Composable
 fun CameraPreviewAndOverlay(
     poseDetector: PoseDetector,
+    cameraCalibrationProvider: CameraCalibrationProvider,
     landmarks: List<PoseLandmark>,
-    onPoseDetected: (List<PoseLandmark>, Bitmap) -> Unit
+    onPoseDetected: (List<PoseLandmark>, Bitmap, com.fitscan.app.domain.model.CameraCalibration?) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     
     val previewView = remember { PreviewView(context) }
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    val cameraCalibration = remember { cameraCalibrationProvider.getBackCameraCalibration() }
 
     DisposableEffect(Unit) {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
@@ -206,7 +211,7 @@ fun CameraPreviewAndOverlay(
             imageAnalysis.setAnalyzer(
                 cameraExecutor,
                 PoseAnalyzer(poseDetector) { detectedLandmarks, bitmap ->
-                    onPoseDetected(detectedLandmarks, bitmap)
+                    onPoseDetected(detectedLandmarks, bitmap, cameraCalibration)
                 }
             )
 

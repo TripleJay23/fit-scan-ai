@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.fitscan.app.domain.model.AnalysisRequest
+import com.fitscan.app.domain.model.ReferenceObjectType
 import com.fitscan.app.domain.model.ScanResult
 import com.fitscan.app.domain.usecase.AnalyzeImageUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,10 +27,16 @@ class UploadViewModel(
     private val _uiState = MutableStateFlow<UploadUiState>(UploadUiState.Idle)
     val uiState: StateFlow<UploadUiState> = _uiState.asStateFlow()
 
-    fun analyzeSelectedPhoto(bitmap: Bitmap, heightCm: Float) {
+    fun analyzeSelectedPhoto(bitmap: Bitmap, heightCm: Float, referenceObjectType: ReferenceObjectType?) {
         viewModelScope.launch {
             _uiState.value = UploadUiState.Processing
-            analyzeImageUseCase(bitmap, heightCm).fold(
+            analyzeImageUseCase(
+                AnalysisRequest(
+                    bitmap = bitmap,
+                    userHeightCm = heightCm,
+                    referenceObjectType = referenceObjectType
+                )
+            ).fold(
                 onSuccess = { result ->
                     _uiState.value = UploadUiState.Complete(result)
                 },

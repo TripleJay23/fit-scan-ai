@@ -3,6 +3,8 @@ package com.fitscan.app.ui.screens.camera
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.fitscan.app.domain.model.AnalysisRequest
+import com.fitscan.app.domain.model.CameraCalibration
 import androidx.lifecycle.viewModelScope
 import com.fitscan.app.domain.model.PoseLandmark
 import com.fitscan.app.domain.model.ScanResult
@@ -31,10 +33,12 @@ class CameraViewModel(
     val detectedLandmarks: StateFlow<List<PoseLandmark>> = _detectedLandmarks.asStateFlow()
 
     private var activeBitmap: Bitmap? = null
+    private var activeCameraCalibration: CameraCalibration? = null
 
-    fun onPoseDetected(landmarks: List<PoseLandmark>, bitmap: Bitmap) {
+    fun onPoseDetected(landmarks: List<PoseLandmark>, bitmap: Bitmap, cameraCalibration: CameraCalibration?) {
         _detectedLandmarks.value = landmarks
         activeBitmap = bitmap
+        activeCameraCalibration = cameraCalibration
     }
 
     fun lockAndAnalyze(heightCm: Float) {
@@ -42,7 +46,13 @@ class CameraViewModel(
         
         viewModelScope.launch {
             _uiState.value = CameraUiState.Measuring
-            analyzeImageUseCase(bitmap, heightCm).fold(
+            analyzeImageUseCase(
+                AnalysisRequest(
+                    bitmap = bitmap,
+                    userHeightCm = heightCm,
+                    cameraCalibration = activeCameraCalibration
+                )
+            ).fold(
                 onSuccess = { result ->
                     _uiState.value = CameraUiState.Complete(result)
                 },
@@ -57,6 +67,7 @@ class CameraViewModel(
         _uiState.value = CameraUiState.Idle
         _detectedLandmarks.value = emptyList()
         activeBitmap = null
+        activeCameraCalibration = null
     }
 }
 
