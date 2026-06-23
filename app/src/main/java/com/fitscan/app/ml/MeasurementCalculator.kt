@@ -19,7 +19,8 @@ object MeasurementCalculator {
         val userHeightCm: Float? = null,
         val referenceObjectType: ReferenceObjectType? = null,
         val referenceObjectPixels: Float? = null,
-        val cameraCalibration: CameraCalibration? = null
+        val cameraCalibration: CameraCalibration? = null,
+        val assumedDistanceCm: Float = 150f // Default scan distance
     )
 
     private data class ImagePoint(val x: Float, val y: Float)
@@ -74,19 +75,27 @@ object MeasurementCalculator {
         val cy = calibration.intrinsicCalibration.getOrNull(3) ?: return point
         if (fx == 0f || fy == 0f) return point
 
+        // [k1, k2, k3, p1, p2]
         val k1 = calibration.lensDistortion.getOrNull(0) ?: 0f
         val k2 = calibration.lensDistortion.getOrNull(1) ?: 0f
         val k3 = calibration.lensDistortion.getOrNull(2) ?: 0f
+        val p1 = calibration.lensDistortion.getOrNull(3) ?: 0f
+        val p2 = calibration.lensDistortion.getOrNull(4) ?: 0f
 
-        val normalizedX = (point.x - cx) / fx
-        val normalizedY = (point.y - cy) / fy
-        val radiusSquared = normalizedX * normalizedX + normalizedY * normalizedY
-        val radial = 1f + k1 * radiusSquared + k2 * radiusSquared.pow(2) + k3 * radiusSquared.pow(3)
-        if (radial == 0f) return point
+        val x = (point.x - cx) / fx
+        val y = (point.y - cy) / fy
+        val r2 = x * x + y * y
+        
+        // Radial part
+        val radial = 1f + k1 * r2 + k2 * r2.pow(2) + k3 * r2.pow(3)
+        
+        // Tangential part
+        val dx = 2f * p1 * x * y + p2 * (r2 + 2f * x * x)
+        val dy = p1 * (r2 + 2f * y * y) + 2f * p2 * x * y
 
         return ImagePoint(
-            x = cx + (normalizedX / radial) * fx,
-            y = cy + (normalizedY / radial) * fy
+            x = cx + (x * radial + dx) * fx,
+            y = cy + (y * radial + dy) * fy
         )
     }
 
@@ -158,18 +167,39 @@ object MeasurementCalculator {
         val calibrationMethod: String
         val calibrationSource: String
 
+        // Method A: Reference Object (Highest Precision)
         if (referenceObjectType != null && referencePixels != null && referencePixels > 0f) {
             scaleFactor = referenceObjectType.physicalWidthCm / referencePixels
             calibrationMethod = "Reference Object Calibration (${referenceObjectType.key}: ${referenceObjectType.physicalWidthCm}cm = ${"%.1f".format(referencePixels)}px)"
             calibrationSource = "reference_object"
-        } else {
+        } 
+        // Method B: Camera2 Intrinsics (Mitigate Distortion)
+        else if (cameraCalibration?.sensorPhysicalSize != null && 
+                 cameraCalibration.focalLengthsMm.isNotEmpty() && 
+                 cameraCalibration.pixelArraySize != null) {
+            
+            val focalLength = cameraCalibration.focalLengthsMm[0]
+            val sensorWidth = cameraCalibration.sensorPhysicalSize.widthMm
+            val pixelWidth = cameraCalibration.pixelArraySize.widthPx
+            
+            // Basic scale factor at assumed distance D (Thick lens/pinhole approximation)
+            // S = (D * sensor_w) / (f * pixel_w)
+            val baseScale = (calibrationInput.assumedDistanceCm * (sensorWidth / 10f)) / 
+                           ((focalLength / 10f) * pixelWidth)
+            
+            // Correct using user height to refine distance estimate
+            val calculatedHeight = actualPixelHeight * baseScale
+            val distanceCorrection = userHeight / calculatedHeight
+            scaleFactor = baseScale * distanceCorrection
+            
+            calibrationMethod = "Camera Intrinsic Calibration (Assisted by User Height)"
+            calibrationSource = "camera_intrinsics"
+        }
+        // Method C: User Height (Fallback)
+        else {
             scaleFactor = userHeight / actualPixelHeight
-            calibrationSource = if (cameraAssisted) "camera_intrinsics_height" else "user_height"
-            calibrationMethod = if (cameraAssisted) {
-                "Camera Intrinsic Assisted Height Calibration (${userHeight}cm = ${"%.1f".format(actualPixelHeight)}px)"
-            } else {
-                "User Height Calibration (${userHeight}cm = ${"%.1f".format(actualPixelHeight)}px)"
-            }
+            calibrationSource = "user_height"
+            calibrationMethod = "User Height Calibration (${userHeight}cm = ${"%.1f".format(actualPixelHeight)}px)"
         }
 
         // 2. Transpile width spatial metrics

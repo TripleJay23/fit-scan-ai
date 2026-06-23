@@ -1,14 +1,18 @@
-# Backend Deprecated
+# Backend Deprecation Notice
 
-The FitScan team has chosen an offline-first product direction.
+This backend module is now **DEPRECATED** and serves as a reference-only archive.
 
-The Android app is now the production source of truth for body analysis, measurement calibration, and clothing size mapping. This Python backend is retained only as reference material during migration of historical measurement logic.
+### Reason for Deprecation
+To ensure FitScan is a truly **Edge-Native** and **Offline-First** application, all computer vision, anatomical math, and sizing algorithms have been ported to the Android frontend.
 
-Do not add new production measurement behavior here. Port needed behavior into the Android app instead.
+### Final Production Flow (Android App)
+1. **Pose Detection**: MediaPipe Tasks Vision (On-Device).
+2. **Person Detection**: YOLOv8 TFLite (On-Device).
+3. **Anatomical Math**: `MeasurementCalculator.kt` (Kotlin).
+4. **Calibration**: Camera2 Intrinsics + Reference Objects (On-Device).
 
-Current Android migration targets:
+### Reference Use Only
+Developers should use this folder only to understand the legacy Python-based prototype logic. New sizing rules or model updates should be implemented directly in the Android Kotlin codebase.
 
-- Person detection and crop selection must be edge-native.
-- Reference-object calibration must run locally.
-- Camera2 intrinsic metadata must be used when available.
-- Backend dependencies must not be required for normal app scanning.
+---
+*Date: 2026-06-24*
